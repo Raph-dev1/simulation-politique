@@ -1,6 +1,7 @@
-uvicorn\
-transformers\
-torch --index-url https://download.pytorch.org/whl/cpu\
-pandas\
-numpy\
-sentencepiece}
+fastapi
+uvicorn
+transformers
+torch --index-url https://download.pytorch.org/whl/cpu
+pandas
+numpy
+sentencepiece
