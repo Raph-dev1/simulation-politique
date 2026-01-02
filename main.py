@@ -9,10 +9,8 @@ from pydantic import BaseModel
 from typing import List, Dict
 from transformers import CamembertTokenizer, CamembertModel
 
-# 1. Initialisation de l'API
-app = FastAPI(title="Moteur de Simulation Politique")
+app = FastAPI()
 
-# 2. Configuration CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,15 +18,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 3. Chargement du modèle CamemBERT (CPU)
 DEVICE = "cpu"
 MODEL_NAME = "camembert-base"
 
-print("Chargement de CamemBERT... (cela peut prendre quelques minutes)")
 tokenizer = CamembertTokenizer.from_pretrained(MODEL_NAME)
 bert = CamembertModel.from_pretrained(MODEL_NAME).to(DEVICE)
 bert.eval()
-print("Modèle chargé avec succès.")
 
 class SimulationRequest(BaseModel):
     profiles: List[str]
@@ -36,14 +31,7 @@ class SimulationRequest(BaseModel):
 
 @torch.no_grad()
 def get_embeddings(texts: List[str]):
-    inputs = tokenizer(
-        texts,
-        padding=True,
-        truncation=True,
-        max_length=256,
-        return_tensors="pt"
-    ).to(DEVICE)
-
+    inputs = tokenizer(texts, padding=True, truncation=True, max_length=256, return_tensors="pt").to(DEVICE)
     outputs = bert(**inputs)
     mask = inputs["attention_mask"].unsqueeze(-1)
     embeddings = (outputs.last_hidden_state * mask).sum(1) / mask.sum(1).clamp(min=1e-9)
@@ -57,12 +45,7 @@ async def simulate(req: SimulationRequest):
         program_vecs = get_embeddings(program_texts)
         profile_vecs = get_embeddings(req.profiles)
         scores = np.dot(profile_vecs, program_vecs.T)
-
-        return {
-            "status": "success",
-            "labels": party_names,
-            "scores": scores.tolist()
-        }
+        return {"status": "success", "labels": party_names, "scores": scores.tolist()}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
